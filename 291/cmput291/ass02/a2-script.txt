@@ -1,0 +1,142 @@
+--Question 1
+SELECT c.cid
+FROM customers c
+EXCEPT
+SELECT DISTINCT o.cid
+FROM orders o, olines l, products p, categories k
+WHERE o.oid=l.oid AND
+      l.pid=p.pid AND
+      p.cat=k.cat AND
+      k.name='Dairy';
+c30
+c40
+c60
+c70
+c80
+--Question 2
+SELECT DISTINCT  o.oid
+FROM olines o, olines j, products p,products k, categories c
+WHERE o.oid=j.oid AND
+      o.sid<>j.sid AND
+      o.pid=p.pid AND
+      j.pid=k.pid AND
+      p.cat=c.cat AND
+      k.cat=c.cat AND
+      c.name='Dairy';
+120
+      
+--Question 3
+SELECT t.trackingno
+FROM deliveries t, orders o, customers c
+WHERE t.oid=o.oid AND
+      o.cid=c.cid AND
+      c.name = "John Doe" AND
+      t.pickUpTime>=datetime("now","-1 day") AND
+      t.dropOffTime is null;
+1003
+--Question 4
+SELECT COUNT(*), c.sid
+FROM carries c
+WHERE NOT EXISTS (SELECT j.sid FROM carries j WHERE c.pid=j.pid AND c.sid<>j.sid)
+GROUP BY c.sid;
+1|10
+1|30
+2|70
+--Question 5
+SELECT o.cid, l.sid
+FROM olines l,orders o
+WHERE o.oid=l.oid      
+GROUP BY o.cid, l.sid
+HAVING COUNT(o.oid)>= 0.5*(SELECT COUNT(k.oid) FROM orders k WHERE k.cid=o.cid);
+c10|20
+c20|20
+c20|40
+c30|20
+c40|30
+c50|10
+c50|20
+c50|30
+c60|70
+c70|10
+c80|30
+--Question 6
+SELECT c.cat,ifnull( COUNT(DISTINCT p.pid),0), ifnull(COUNT(DISTINCT k.sid),0),ifnull( COUNT(DISTINCT o.oid),0)
+FROM categories c LEFT OUTER JOIN  products p ON (c.cat=p.cat)
+     		LEFT OUTER JOIN carries k ON (p.pid=k.pid) 
+     	       LEFT OUTER JOIN olines o ON (p.pid=o.pid)
+GROUP BY c.cat;
+bak|2|4|3
+clo|2|1|1
+dai|3|4|3
+ele|4|6|6
+hom|3|3|0
+pro|4|3|4
+
+--Question 7
+SELECT p.pid, p.name ,COUNT(DISTINCT o.sid)
+FROM products p, olines o
+WHERE p.pid=o.pid
+GROUP BY p.pid,p.name
+ORDER BY COUNT(o.oid) DESC
+LIMIT 5;
+p10|4L milk 1%|2
+p110|8gb sdhc Card|2
+p120|aaa batteries (8-pk)|2
+p20|dozen large egg|2
+p50|dozen donuts|2
+-- Question 8
+SELECT o.cid
+FROM orders o, olines l, stores s
+WHERE o.oid=l.oid AND
+      s.sid=l.sid
+GROUP BY o.cid
+HAVING COUNT(DISTINCT l.sid)=1 and s.name<>'Walmart';
+c60
+c70
+c80
+--Question 9
+DROP VIEW  goodprices;
+CREATE VIEW goodprices
+AS SELECT s.name, c.pid, c.sid, c.qty, c.uprice
+FROM carries c, stores s
+WHERE  c.qty>0 AND
+       s.sid=c.sid AND
+       c.uprice= (SELECT MIN(d.uprice) FROM carries d GROUP BY d.pid HAVING  d.pid=c.pid);
+SELECT *
+FROM goodprices;
+Canadian Tire|p110|10|75|13.99
+Canadian Tire|p120|10|50|12.99
+Canadian Tire|p130|10|20|249.99
+Canadian Tire|p160|10|35|24.99
+Canadian Tire|p170|10|40|19.99
+Walmart|p50|20|40|4.0
+Walmart|p60|20|100|0.79
+Walmart|p70|20|90|1.15
+Walmart|p100|20|20|11.79
+Loblaw City Market|p10|30|90|4.6
+Loblaw City Market|p80|30|40|1.99
+Loblaw City Market|p90|30|70|1.79
+Loblaw City Market|p160|30|30|24.99
+Shoppers Drug Mart|p20|40|70|2.4
+Shoppers Drug Mart|p40|40|89|1.99
+Shoppers Drug Mart|p60|40|100|0.79
+Shoppers Drug Mart|p120|40|35|12.99
+Shoppers Drug Mart|p20|50|80|2.4
+Shoppers Drug Mart|p40|50|84|1.99
+Shoppers Drug Mart|p120|50|4|12.99
+Sears Department Store|p170|60|50|19.99
+Hudsons Bay|p140|70|32|22.99
+Hudsons Bay|p150|70|28|54.99
+--Question 10
+SELECT DISTINCT o.cid
+FROM  olines d, orders o
+WHERE o.oid=d.oid AND
+      datetime('now','-7 day')<=o.odate AND
+        d.uprice<=(SELECT g.uprice FROM goodprices g WHERE d.pid=g.pid);
+c40
+c20
+c60
+c50
+c10
+c70
+c80
